@@ -16,7 +16,7 @@ from transformers import (
 )
 from typing import Any, Dict, List, Optional, Union
 
-from corpus import CommonVoice
+from corpus import CommonVoice, Recordings
 from data_collator import DataCollatorCTCWithPadding
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -76,12 +76,13 @@ def inference(test_dataset, model, processor):
 
 def main():
     processor = Wav2Vec2Processor.from_pretrained("wav2vec2-large-xls-r-300m-mn-colab/checkpoint-6100")
-    common_voice_train = CommonVoice(["cv-corpus-10.0-2022-07-04/nan-tw/train-processed.csv"], processor).dataset
-    common_voice_test = CommonVoice(["cv-corpus-10.0-2022-07-04/nan-tw/test-processed.csv"], processor).dataset
     model = Wav2Vec2ForCTC.from_pretrained("wav2vec2-large-xls-r-300m-mn-colab/checkpoint-6100").to("cuda")
-    data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
+    # common_voice_train = CommonVoice(["cv-corpus-10.0-2022-07-04/nan-tw/train-processed.csv"], processor).dataset
+    # common_voice_test = CommonVoice(["cv-corpus-10.0-2022-07-04/nan-tw/test-processed.csv"], processor).dataset
+    # data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
     # wer(common_voice_train, common_voice_test, model, processor, data_collator)
-    inference(common_voice_test, model, processor)
+    jiyun_recordings = Recordings(["jiyun-corpus/test-processed.csv"], processor, "jiyun").dataset
+    inference(jiyun_recordings, model, processor)
 
 if __name__ == "__main__":
     main()
