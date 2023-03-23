@@ -18,6 +18,9 @@ class BuildCsv():
         self.dataset = load_dataset("csv", data_files=data_files)["train"]
         self.output_file = output_file
 
+    def remove_columns(self):
+        self.dataset = self.dataset.remove_columns([c for c in self.dataset.column_names if c not in ["path", "tailo"]])
+
     def remove_punctuation_marks(self):
         def replace_with_space(batch):
             chars_to_remove_regex = "[-\",.!~()*;\':?！|、，。？‘－“”﹖（）「」｢｣：；ㄅㄆㄇ⋯──《》＊—／…+/=―’\%]"
@@ -27,6 +30,12 @@ class BuildCsv():
             batch["tailo"] = " ".join([w for w in tailo_list if w]).strip()
             return batch
         self.dataset = self.dataset.map(replace_with_space)
+
+    def is_valid_tailo(self, tailo):
+        return all(re.match(r"^[a-zA-Z]+[0-9]$", w) for w in tailo.split(" "))
+
+    def remove_tone_instances(self):
+        self.dataset = self.dataset.filter(lambda example: self.is_valid_tailo(example["tailo"]))
 
     def to_csv(self):
         self.dataset.to_csv(self.output_file, index=False)
@@ -60,7 +69,9 @@ class BuildCsvFromCommonVoice(BuildCsv):
     def build(self):
         self.tailo()
         self.remove_punctuation_marks()
+        self.remove_tone_instances()
         self.expand_filename()
+        self.remove_columns()
         self.to_csv()
 
 class BuildCsvFromCommonVoiceTrain(BuildCsvFromCommonVoice):
@@ -74,6 +85,10 @@ class BuildCsvFromCommonVoiceTest(BuildCsvFromCommonVoice):
 class BuildCsvFromSuisiann(BuildCsv):
     def __init__(self):
         super().__init__(["Suisiann/SuiSiann.csv"], "Suisiann/SuiSiann-processed.csv")
+
+    def remove_long_audios(self):
+        # avoid OUT OF CUDA error
+        self.dataset = self.dataset.filter(lambda example: float(example["length"]) <= 20.)
 
     def expand_filename(self):
         def add_filename_prefix(batch):
@@ -90,7 +105,10 @@ class BuildCsvFromSuisiann(BuildCsv):
     def build(self):
         self.tailo()
         self.remove_punctuation_marks()
+        self.remove_tone_instances()
         self.expand_filename()
+        self.remove_long_audios()
+        self.remove_columns()
         self.to_csv()
 
 class BuildCsvFromTAT(BuildCsv):
@@ -141,26 +159,28 @@ class BuildCsvFromTAT(BuildCsv):
                          os.path.join(self.output_dir, "lavalier-processed.csv"))
         self.tailo()
         self.remove_punctuation_marks()
+        self.remove_tone_instances()
+        self.remove_columns()
         self.to_csv()
 
 if __name__ == "__main__":
-    # build_common_voice_train = BuildCsvFromCommonVoiceTrain()
-    # build_common_voice_train.build()
-    # build_common_voice_test = BuildCsvFromCommonVoiceTest()
-    # build_common_voice_test.build()
+    build_common_voice_train = BuildCsvFromCommonVoiceTrain()
+    build_common_voice_train.build()
+    build_common_voice_test = BuildCsvFromCommonVoiceTest()
+    build_common_voice_test.build()
 
-    # build_suisiann = BuildCsvFromSuisiann()
-    # build_suisiann.build()
+    build_suisiann = BuildCsvFromSuisiann()
+    build_suisiann.build()
 
-    # build_TAT_Vol1_train = BuildCsvFromTAT("TAT/TAT-Vol1-train/d26eae87829adde551bf4b852f9da6b8c3c2db9b65b8b68870632a2db5f53e00-master/",
-    #                                        "TAT/TAT-Vol1-train/d26eae87829adde551bf4b852f9da6b8c3c2db9b65b8b68870632a2db5f53e00-master/json",
-    #                                        "TAT/TAT-Vol1-train")
-    # build_TAT_Vol1_train.build()
+    build_TAT_Vol1_train = BuildCsvFromTAT("TAT/TAT-Vol1-train/d26eae87829adde551bf4b852f9da6b8c3c2db9b65b8b68870632a2db5f53e00-master/",
+                                           "TAT/TAT-Vol1-train/d26eae87829adde551bf4b852f9da6b8c3c2db9b65b8b68870632a2db5f53e00-master/json",
+                                           "TAT/TAT-Vol1-train")
+    build_TAT_Vol1_train.build()
 
-    # build_TAT_Vol2_train = BuildCsvFromTAT("TAT/TAT-Vol2-train/f64f410744d9470ffe2d6b9ee6f042cdffcc42a745d2568146e8782ea828ff48-master",
-    #                                        "TAT/TAT-Vol2-train/f64f410744d9470ffe2d6b9ee6f042cdffcc42a745d2568146e8782ea828ff48-master/json",
-    #                                        "TAT/TAT-Vol2-train")
-    # build_TAT_Vol2_train.build()
+    build_TAT_Vol2_train = BuildCsvFromTAT("TAT/TAT-Vol2-train/f64f410744d9470ffe2d6b9ee6f042cdffcc42a745d2568146e8782ea828ff48-master",
+                                           "TAT/TAT-Vol2-train/f64f410744d9470ffe2d6b9ee6f042cdffcc42a745d2568146e8782ea828ff48-master/json",
+                                           "TAT/TAT-Vol2-train")
+    build_TAT_Vol2_train.build()
 
     build_TAT_Vol1_test = BuildCsvFromTAT("TAT/TAT-Vol1-test/b7c7470e59e2a2df1bfd0a4705488ee6fe0c5c125de15cccdfab0e00d6c03dc0-master/",
                                           "TAT/TAT-Vol1-test-key/e6f47e008cc58b38596e6fdf2f50a0fea93fd10543e652522aeab3aa71355719-master/json/",

@@ -17,6 +17,7 @@ def inference(test_dataset, model, processor):
         pred_ids = torch.argmax(logits, dim=-1)[0]
 
         print("Prediction:")
+        print(pred_ids)
         print(processor.decode(pred_ids))
 
 def wer(test_dataset, model, processor):
@@ -40,16 +41,16 @@ def wer(test_dataset, model, processor):
     print("Test WER: {:.3f}".format(wer_metric.compute(predictions=results["pred_str"], references=results["text"])))
 
 def main():
-    processor = Wav2Vec2Processor.from_pretrained("wav2vec2-large-xls-r-300m-mn-colab/checkpoint-6100")
-    model = Wav2Vec2ForCTC.from_pretrained("wav2vec2-large-xls-r-300m-mn-colab/checkpoint-6100").to("cuda")
+    processor = Wav2Vec2Processor.from_pretrained("wav2vec2-large-xls-r-300m-cv-suisiann-tat-vol12-lavalier/checkpoint-1576")
+    model = Wav2Vec2ForCTC.from_pretrained("wav2vec2-large-xls-r-300m-cv-suisiann-tat-vol12-lavalier/checkpoint-1576").to("cuda")
     #data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
     #common_voice_train = CommonVoice(["cv-corpus-10.0-2022-07-04/nan-tw/train-processed.csv"], processor).dataset
-    common_voice_test = CommonVoice(["cv-corpus-10.0-2022-07-04/nan-tw/test-processed-2.csv"], processor).dataset
+    #common_voice_test = CommonVoice(["cv-corpus-10.0-2022-07-04/nan-tw/test-processed-2.csv"], processor).dataset
     #suisiann_test = Suisiann(["Suisiann/SuiSiann-processed.csv"], processor).dataset
-    #tat_vol1_eval = TAT(["TAT/TAT-Vol1-eval.csv"], processor).dataset
-    #jiyun_recordings = Recordings(["jiyun-corpus/test-processed.csv"], processor, "jiyun").dataset
-    #inference(suisiann_test, model, processor)
-    wer(common_voice_test, model, processor)
+    #tat_vol1_eval = TAT(["TAT/TAT-Vol1-test/lavalier-processed.csv"], processor).dataset
+    jiyun_recordings = Recordings(["jiyun-corpus/test-processed.csv"], processor).dataset
+    inference(jiyun_recordings, model, processor)
+    #wer(jiyun_recordings, model, processor)
 
 if __name__ == "__main__":
     main()

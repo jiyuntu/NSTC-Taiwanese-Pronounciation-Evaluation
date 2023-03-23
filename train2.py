@@ -16,12 +16,15 @@ from transformers import (
 )
 from typing import Any, Dict, List, Optional, Union
 
+from build_vocab import build_vocab
 from corpus import CommonVoice, Suisiann, TAT
 from data_collator import DataCollatorCTCWithPadding
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-disable_caching()
+build_vocab()
+
+# disable_caching()
 tokenizer = Wav2Vec2CTCTokenizer.from_pretrained("./", unk_token="[UNK]", pad_token="[PAD]", word_delimiter_token="|")
 feature_extractor = Wav2Vec2FeatureExtractor(feature_size=1, sampling_rate=16000, padding_value=0.0, do_normalize=True, return_attention_mask=True)
 processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
@@ -71,25 +74,29 @@ model = Wav2Vec2ForCTC.from_pretrained(
     feat_proj_dropout=0.0,
     mask_time_prob=0.05,
     layerdrop=0.0,
-    ctc_loss_reduction="mean", 
+    ctc_loss_reduction="mean",
     pad_token_id=processor.tokenizer.pad_token_id,
     vocab_size=len(processor.tokenizer),
 )
 model.freeze_feature_extractor()
 
-output_dir = "wav2vec2-large-xls-r-300m-cv-suisiann-tat-vol12-lavalier"
+output_dir = "wav2vec2-large-xls-r-300m-cv-suisiann-tat-vol12-lavalier-3"
 training_args = TrainingArguments(
     output_dir=output_dir,
     group_by_length=True,
     per_device_train_batch_size=4,
     per_device_eval_batch_size=4,
     gradient_accumulation_steps=8,
+    dataloader_drop_last=True,
     evaluation_strategy="epoch",
     save_strategy="epoch",
+    load_best_model_at_end=True,
+    metric_for_best_model="eval_wer",
+    greater_is_better=False,
     num_train_epochs=100,
     gradient_checkpointing=True,
     fp16=True,
-    logging_steps=400,
+    logging_steps=500,
     learning_rate=3e-4,
     warmup_steps=500,
     save_total_limit=2,
